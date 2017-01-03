@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+
+# Copyright © 2016 Jakub Wilk <jwilk@jwilk.net>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the “Software”), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import abc
+import argparse
+import hashlib
+import os
+import stat
+import sys
+import unittest.mock
+
+with unittest.mock.patch.dict(os.environ, PATH='/nonexistent'):
+    # tqdm wants to execute git for no good reason:
+    # https://github.com/tqdm/tqdm/issues/328
+    # Let's foil this plan:
+    import tqdm
+
+class Scanner(object, metaclass=abc.ABCMeta):
+
+    def __init__(self, dirs):
+        self._dirs = dirs
+
+    def __call__(self):
+        self.start()
+        for d in self._dirs:
+            self._traverse_dir(d)
+        self.stop()
+
+    def _traverse_dir(self, d):
+        self.visit_dir(d)
+        for dirname, dirs, files in os.walk(d):
+            self.visit_dir(dirname)
+            sfiles = []
+            for filename in files:
+                path = os.path.join(dirname, filename)
+                st = os.lstat(path)
+                if not stat.S_ISREG(st.st_mode):
+                    continue
+                sfiles += [(filename, st)]
+            def k(obj):
+                (_, st) = obj
+                return st.st_ino
+            sfiles.sort(key=k)
+            for filename, st in sfiles:
+                self.visit_file(dirname, filename, st)
+
+    @abc.abstractmethod
+    def visit_dir(self, dirname):
+        pass
+
+    @abc.abstractmethod
+    def visit_file(self, dirname, filename, st):
+        pass
+
+def str_truncate(s, maxlen):
+    if len(s) <= maxlen:
+        return s
+    if len(s) < 3:
+        return s
+    maxlen -= 3
+    if maxlen < 0:
+        s = ''
+    else:
+        s = s[:maxlen]
+    return s + '...'
+
+def get_term_width(file):
+    try:
+        (w, h) = os.get_terminal_size(file.fileno())
+    except (OSError, AttributeError):
+        w = 1e999
+    return w
+
+class Counter(Scanner):
+
+    def start(self):
+        self.n = 0
+        self.size = 0
+        self._path = None
+        self._width = get_term_width(sys.stderr)
+
+    def visit_dir(self, dirname):
+        self._path = dirname
+        self._update_progress(dirname)
+
+    def visit_file(self, dirname, filename, st):
+        self.n += 1
+        self.size += st.st_size
+        path = os.path.join(dirname, filename)
+        self._update_progress(path)
+
+    def _update_progress(self, path):
+        msg = 'Scanning: {n} files, {size}'.format(
+            n=self.n,
+            size=tqdm.tqdm.format_sizeof(self.size, 'B'),
+        )
+        trunc_path = str_truncate(path, self._width - len(msg) - 3)
+        print('\r\x1b[2K{msg}, {path}'.format(
+            msg=msg,
+            path=trunc_path
+        ), end='', file=sys.stderr)
+
+    def stop(self):
+        print('\r\x1b[2KScanning done: {n} files, {size}'.format(
+            n=self.n,
+            size=tqdm.tqdm.format_sizeof(self.size, 'B'),
+        ), file=sys.stderr)
+
+class Linker(Scanner):
+
+    def __init__(self, options):
+        super().__init__(options.dirs)
+        self._log = None
+        self._memo = {}
+        self._options = options
+
+    def _update_progress(self, path, n=0):
+        if n > 0:
+            self._progress.update(n)
+
+    def start(self):
+        log_path = self._options.log
+        if log_path is not None:
+            self._log = open(log_path, 'wt', encoding='UTF-8')
+        self._progress = tqdm.tqdm(unit='B', unit_scale=True, leave=True)
+        self._progress.total = self._options.size
+        self._progress.refresh()
+
+    def log(self, *args, **kwargs):
+        if self._log is None:
+            return
+        print(*args, **kwargs, file=self._log)
+
+    def visit_dir(self, dirname):
+        self._update_progress(dirname)
+
+    def visit_file(self, dirname, filename, st):
+        if st.st_size == 0:
+            return
+        options = self._options
+        path = os.path.join(dirname, filename)
+        dg = hashlib.md5()
+        with open(path, 'rb') as file:
+            chunk = '{uid}:{gid}:{mode}:'.format(
+                uid=st.st_uid,
+                gid=st.st_gid,
+                mode=st.st_mode,
+            )
+            if not options.ignore_time:
+                chunk += '{atime}:{mtime}:{ctime}:'.format(
+                    atime=st.st_atime,
+                    mtime=st.st_mtime,
+                    ctime=st.st_ctime,
+                )
+            chunk + '\0'
+            chunk = chunk.encode('ASCII')
+            dg.update(chunk)
+            while True:
+                chunk = file.read(32 << 10)
+                if not chunk:
+                    break
+                dg.update(chunk)
+        dg = dg.digest()
+        if dg not in self._memo:
+            self._memo[dg] = (dirname, filename)
+        else:
+            (orig_dirname, orig_filename) = self._memo[dg]
+            orig_path = os.path.join(orig_dirname, orig_filename)
+            self.log(orig_path, '->', path)
+            if not options.dry_run:
+                tmp_path = os.path.join(dirname, '.hardball-backup-' + filename)
+                fd = os.open(tmp_path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
+                os.close(fd)
+                os.rename(path, tmp_path)
+                try:
+                    os.link(orig_path, path)
+                except:
+                    os.rename(tmp_path, path)
+                    raise
+                else:
+                    os.unlink(tmp_path)
+        self._update_progress(path, st.st_size)
+
+    def stop(self):
+        if self._log is not None:
+            self._log.close()
+            self._log = None
+        self._progress.close()
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('dirs', metavar='DIR', nargs='+')
+    ap.add_argument('-t', '--ignore-time', action='store_true')
+    ap.add_argument('-n', '--dry-run', action='store_true')
+    ap.add_argument('--log')
+    options = ap.parse_args()
+    counter = Counter(options.dirs)
+    counter()
+    options.size = counter.size
+    linker = Linker(options)
+    linker()
+
+if __name__ == '__main__':
+    main()
+
+# vim:ts=4 sw=4 sts=4
