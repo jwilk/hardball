@@ -1,0 +1,23 @@
+Overview
+========
+
+**hardball** hardlinks identical copies of the same file.
+It's dumb and fast (for Jakub's particular data set; YMMV).
+
+.. warning::
+
+   This is experimental software.
+   It will eat your firstborn *and* your data.
+   You have been warned.
+
+Prerequisites
+=============
+
+* Python ≥ 3.5
+
+* tqdm_
+
+.. _tqdm:
+   https://pypi.python.org/pypi/tqdm
+
+.. vim:ft=rst ts=3 sts=3 sw=3 et
