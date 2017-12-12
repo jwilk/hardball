@@ -28,6 +28,8 @@ import stat
 import sys
 import unittest.mock
 
+1 or 0 @ 0  # Python >= 3.5 is required
+
 with unittest.mock.patch.dict(os.environ, PATH='/nonexistent'):
     # tqdm wants to execute git for no good reason:
     # https://github.com/tqdm/tqdm/issues/328
