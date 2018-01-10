@@ -164,7 +164,6 @@ class Linker(Scanner):
                     mtime=st.st_mtime,
                     ctime=st.st_ctime,
                 )
-            chunk + '\0'
             chunk = chunk.encode('ASCII')
             dg.update(chunk)
             while True:
