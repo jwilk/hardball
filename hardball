@@ -49,6 +49,14 @@ class Scanner(object, metaclass=abc.ABCMeta):
                 self.visit_file(dirname, filename, st)
 
     @abc.abstractmethod
+    def start(self):
+        pass
+
+    @abc.abstractmethod
+    def stop(self):
+        pass
+
+    @abc.abstractmethod
     def visit_dir(self, dirname):
         pass
 
