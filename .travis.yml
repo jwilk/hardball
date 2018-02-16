@@ -8,8 +8,11 @@ python:
 - pypy3
 install:
 - pip install tqdm
+- pip install pydiatra pyflakes
 script:
 - ./hardball --help
 - ./hardball --dry-run .
+- python3 -m pydiatra .
+- python3 -m pyflakes .
 
 # vim:ts=2 sts=2 sw=2 et
