@@ -18,6 +18,6 @@ Prerequisites
 * tqdm_
 
 .. _tqdm:
-   https://pypi.python.org/pypi/tqdm
+   https://pypi.org/project/tqdm/
 
 .. vim:ft=rst ts=3 sts=3 sw=3 et
