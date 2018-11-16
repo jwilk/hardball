@@ -7,9 +7,9 @@ python:
 - "3.7-dev"
 - pypy3
 install:
-- pip install tqdm
-- pip install pydiatra pyflakes
-- pip install restructuredtext-lint pygments
+- python3 -m pip install tqdm
+- python3 -m pip install pydiatra pyflakes
+- python3 -m pip install restructuredtext-lint pygments
 script:
 - ./hardball --help
 - ./hardball --dry-run .
