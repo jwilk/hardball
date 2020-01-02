@@ -7,6 +7,7 @@ import abc
 import argparse
 import hashlib
 import os
+import re
 import stat
 import sys
 import unittest.mock
@@ -107,6 +108,7 @@ class Counter(Scanner):
             size=tqdm.tqdm.format_sizeof(self.size, 'B'),
         )
         trunc_path = str_truncate(path, self._width - len(msg) - 3)
+        trunc_path = re.sub(r'[\x00-\x1F\x7F]', '?', trunc_path)
         print('\r\x1B[2K{msg}, {path}'.format(
             msg=msg,
             path=trunc_path
