@@ -121,6 +121,10 @@ class Counter(Scanner):
             size=tqdm.tqdm.format_sizeof(self.size, 'B'),
         ), file=sys.stderr)
 
+def xopen(path):
+    fd = os.open(path, os.O_RDONLY | os.O_NOATIME)
+    return open(fd, 'rb')
+
 class Linker(Scanner):
 
     def __init__(self, options):
@@ -155,7 +159,7 @@ class Linker(Scanner):
             return
         path = os.path.join(dirname, filename)
         dg = hashlib.md5()
-        with open(path, 'rb') as file:
+        with xopen(path) as file:
             chunk = '{uid}:{gid}:{mode}:'.format(
                 uid=st.st_uid,
                 gid=st.st_gid,
