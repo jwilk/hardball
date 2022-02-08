@@ -13,7 +13,7 @@ It's dumb and fast (for Jakub's particular data set; YMMV).
 Prerequisites
 =============
 
-* Python ≥ 3.5
+* Python ≥ 3.6
 
 * tqdm_
 

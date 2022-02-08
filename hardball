@@ -13,7 +13,7 @@ import stat
 import sys
 import unittest.mock
 
-1 or 0 @ 0  # Python >= 3.5 is required
+0_0  # Python >= 3.6 is required
 
 with unittest.mock.patch.dict(os.environ, PATH='/nonexistent'):
     # tqdm wants to execute git for no good reason:
@@ -104,22 +104,15 @@ class Counter(Scanner):
         self._update_progress(path)
 
     def _update_progress(self, path):
-        msg = 'Scanning: {n} files, {size}'.format(
-            n=self.n,
-            size=tqdm.tqdm.format_sizeof(self.size, 'B'),
-        )
+        size = tqdm.tqdm.format_sizeof(self.size, 'B')
+        msg = f'Scanning: {self.n} files, {size}'
         trunc_path = str_truncate(path, self._width - len(msg) - 3)
         trunc_path = re.sub(r'[\x00-\x1F\x7F]', '?', trunc_path)
-        print('\r\x1B[2K{msg}, {path}'.format(
-            msg=msg,
-            path=trunc_path
-        ), end='', file=sys.stderr)
+        print(f'\r\x1B[2K{msg}, {trunc_path}', end='', file=sys.stderr)
 
     def stop(self):
-        print('\r\x1B[2KScanning done: {n} files, {size}'.format(
-            n=self.n,
-            size=tqdm.tqdm.format_sizeof(self.size, 'B'),
-        ), file=sys.stderr)
+        size = tqdm.tqdm.format_sizeof(self.size, 'B')
+        print(f'\r\x1B[2KScanning done: {self.n} files, {size}', file=sys.stderr)
 
 def xopen(path):
     fd = os.open(path, os.O_RDONLY | os.O_NOATIME)
@@ -160,17 +153,9 @@ class Linker(Scanner):
         path = os.path.join(dirname, filename)
         dg = hashlib.md5()
         with xopen(path) as file:
-            chunk = '{uid}:{gid}:{mode}:'.format(
-                uid=st.st_uid,
-                gid=st.st_gid,
-                mode=st.st_mode,
-            )
+            chunk = f'{st.st_uid}:{st.st_gid}:{st.st_mode}:'
             if not options.ignore_time:
-                chunk += '{atime}:{mtime}:{ctime}:'.format(
-                    atime=st.st_atime,
-                    mtime=st.st_mtime,
-                    ctime=st.st_ctime,
-                )
+                chunk += f'{st.st_atime}:{st.st_mtime}:{st.st_ctime}:'
             chunk = chunk.encode('ASCII')
             dg.update(chunk)
             while True:
