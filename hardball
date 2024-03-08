@@ -112,7 +112,7 @@ class Counter(Scanner):
 
     def stop(self):
         size = tqdm.tqdm.format_sizeof(self.size, 'B')
-        print(f'\r\33[2KScanning done: {self.n} files, {size}', file=sys.stderr)
+        print('\r\33[2K'f'Scanning done: {self.n} files, {size}', file=sys.stderr)
 
 def xopen(path):
     fd = os.open(path, os.O_RDONLY | os.O_NOATIME)
