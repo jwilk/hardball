@@ -108,11 +108,11 @@ class Counter(Scanner):
         msg = f'Scanning: {self.n} files, {size}'
         trunc_path = str_truncate(path, self._width - len(msg) - 3)
         trunc_path = re.sub(r'[\x00-\x1F\x7F]', '?', trunc_path)
-        print(f'\r\x1B[2K{msg}, {trunc_path}', end='', file=sys.stderr)
+        print(f'\r\33[2K{msg}, {trunc_path}', end='', file=sys.stderr)
 
     def stop(self):
         size = tqdm.tqdm.format_sizeof(self.size, 'B')
-        print(f'\r\x1B[2KScanning done: {self.n} files, {size}', file=sys.stderr)
+        print(f'\r\33[2KScanning done: {self.n} files, {size}', file=sys.stderr)
 
 def xopen(path):
     fd = os.open(path, os.O_RDONLY | os.O_NOATIME)
