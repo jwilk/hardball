@@ -21,7 +21,7 @@ with unittest.mock.patch.dict(os.environ, PATH='/nonexistent'):
     # Let's foil this plan:
     import tqdm
 
-class Scanner(object, metaclass=abc.ABCMeta):
+class Scanner(metaclass=abc.ABCMeta):
 
     def __init__(self, dirs):
         self._dirs = dirs
