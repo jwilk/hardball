@@ -148,10 +148,14 @@ class Linker(Scanner):
         self._update_progress(dirname)
 
     def visit_file(self, dirname, filename, st):
+        path = self._visit_file(dirname, filename, st)
+        self._update_progress(path, st.st_size)
+
+    def _visit_file(self, dirname, filename, st):
+        path = os.path.join(dirname, filename)
         options = self._options
         if st.st_size < options.minimum_size:
-            return
-        path = os.path.join(dirname, filename)
+            return path
         dg = hashlib.md5()
         with xopen(path) as file:
             chunk = f'{st.st_uid}:{st.st_gid}:{st.st_mode}:'
@@ -183,7 +187,7 @@ class Linker(Scanner):
                     raise
                 else:
                     os.unlink(tmp_path)
-        self._update_progress(path, st.st_size)
+        return path
 
     def stop(self):
         if self._log is not None:
