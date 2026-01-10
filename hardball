@@ -125,6 +125,7 @@ class Linker(Scanner):
         super().__init__(options.dirs)
         self._log = None
         self._memo = {}
+        self._inode2dg = {}
         self._options = options
 
     def _update_progress(self, path, n=0):
@@ -156,19 +157,25 @@ class Linker(Scanner):
         options = self._options
         if st.st_size < options.minimum_size:
             return path
-        dg = hashlib.md5()
-        with xopen(path) as file:
-            chunk = f'{st.st_uid}:{st.st_gid}:{st.st_mode}:'
-            if not options.ignore_time:
-                chunk += f'{st.st_atime}:{st.st_mtime}:{st.st_ctime}:'
-            chunk = chunk.encode('ASCII')
-            dg.update(chunk)
-            while True:
-                chunk = file.read(32 << 10)
-                if not chunk:
-                    break
+        dg = None
+        if st.st_nlink > 1:
+            dg = self._inode2dg.get((st.st_dev, st.st_ino))
+        if dg is None:
+            dg = hashlib.md5()
+            with xopen(path) as file:
+                chunk = f'{st.st_uid}:{st.st_gid}:{st.st_mode}:'
+                if not options.ignore_time:
+                    chunk += f'{st.st_atime}:{st.st_mtime}:{st.st_ctime}:'
+                chunk = chunk.encode('ASCII')
                 dg.update(chunk)
-        dg = dg.digest()
+                while True:
+                    chunk = file.read(32 << 10)
+                    if not chunk:
+                        break
+                    dg.update(chunk)
+            dg = dg.digest()
+            if st.st_nlink > 1:
+                self._inode2dg[(st.st_dev, st.st_ino)] = dg
         if dg not in self._memo:
             self._memo[dg] = (dirname, filename)
         else:
