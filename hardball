@@ -124,7 +124,7 @@ class Linker(Scanner):
     def __init__(self, options):
         super().__init__(options.dirs)
         self._log = None
-        self._memo = {}
+        self._dg2path = {}
         self._inode2dg = {}
         self._options = options
 
@@ -176,10 +176,10 @@ class Linker(Scanner):
             dg = dg.digest()
             if st.st_nlink > 1:
                 self._inode2dg[(st.st_dev, st.st_ino)] = dg
-        if dg not in self._memo:
-            self._memo[dg] = (dirname, filename)
+        if dg not in self._dg2path:
+            self._dg2path[dg] = (dirname, filename)
         else:
-            (orig_dirname, orig_filename) = self._memo[dg]
+            (orig_dirname, orig_filename) = self._dg2path[dg]
             orig_path = os.path.join(orig_dirname, orig_filename)
             self.log(orig_path, '->', path)
             if not options.dry_run:
