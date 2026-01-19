@@ -139,6 +139,7 @@ class Linker(Scanner):
         self._progress = tqdm.tqdm(unit='B', unit_scale=True,
             dynamic_ncols=True,
             leave=True,
+            ascii=True,
         )
         self._progress.total = self._options.size
         self._progress.refresh()
