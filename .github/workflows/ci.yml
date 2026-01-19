@@ -10,6 +10,7 @@ jobs:
         include:
         - python: '3.8'
           os: ubuntu-22.04
+          tqdm: tqdm==4.5
         - python: '3.9'
           os: ubuntu-22.04
         - python: '3.10'
@@ -31,7 +32,7 @@ jobs:
         python-version: ${{matrix.python}}
     - name: install deps
       run: |
-        python3 -m pip install tqdm
+        python3 -m pip install ${{matrix.tqdm || 'tqdm'}}
     - name: smoke test
       run: |
         ./hardball --help
