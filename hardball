@@ -136,7 +136,10 @@ class Linker(Scanner):
         log_path = self._options.log
         if log_path is not None:
             self._log = open(log_path, 'wt', encoding='UTF-8')
-        self._progress = tqdm.tqdm(unit='B', unit_scale=True, leave=True)
+        self._progress = tqdm.tqdm(unit='B', unit_scale=True,
+            dynamic_ncols=True,
+            leave=True,
+        )
         self._progress.total = self._options.size
         self._progress.refresh()
 
