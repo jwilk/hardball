@@ -15,7 +15,7 @@ Prerequisites
 
 * Python ≥ 3.6
 
-* tqdm_
+* tqdm_ ≥ 4.5
 
 .. _tqdm:
    https://pypi.org/project/tqdm/
