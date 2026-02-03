@@ -208,6 +208,7 @@ class Linker(Scanner):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.color = False
     ap.add_argument('dirs', metavar='DIR', nargs='+')
     ap.add_argument('-t', '--ignore-time', action='store_true')
     ap.add_argument('-n', '--dry-run', action='store_true')
